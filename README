@@ -1,0 +1,35 @@
+Installation
+============
+
+Database Server
+---------------
+
+Create a database on the database server.
+
+Make it accessible from other machines.
+
+Configure setup.yaml to connect to it.
+
+Run setup-db.py to create the tables in the database and populate the shards
+table.
+
+    python setup-db.py
+
+Make sure the shards table is populated properly.
+
+Worker Clients
+--------------
+
+Configure config.yaml with the connection details for the database.
+
+Create a flickr API key and enter its key and secret in config.yaml. See:
+
+https://www.flickr.com/services/api/misc.api_keys.html
+
+Run the worker e.g. in a screen session.
+
+    screen
+    python ./worker.py
+
+Watch the logs to see that the worker is connecting to the database and running
+tasks, then disconnect from the screen session.

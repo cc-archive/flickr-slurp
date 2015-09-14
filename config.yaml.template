@@ -1,0 +1,8 @@
+database:
+    user: username
+    password: password
+    host: localhost
+    database: flickr
+flickr:
+    api_key: KEY
+    api_secret: SECRET
