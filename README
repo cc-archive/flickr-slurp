@@ -1,6 +1,13 @@
 Installation
 ============
 
+All Machines
+
+Install mysql.connector:
+
+    sudo apt-get install python-mysql.connector
+
+
 Database Server
 ---------------
 
