@@ -4,6 +4,9 @@ import mysql.connector
 from mysql.connector import errorcode
 import yaml
 
+# This is the program that sets up the database.
+# It creates tables, and populates the shards table.
+
 TABLES = {
 'shards':"""
 -- Shards.
@@ -13,7 +16,7 @@ CREATE TABLE shards (
        shard_id     INT         NOT NULL PRIMARY KEY AUTO_INCREMENT,
        license      TINYINT     NOT NULL,
        characters   CHAR(2)     NOT NULL,
-       worker       VARCHAR(255),
+       worker       VARCHAR(20),
        page_total   INT         NOT NULL DEFAULT 0,
        page_current INT         NOT NULL DEFAULT 0
 );
@@ -39,7 +42,26 @@ CREATE TABLE photos (
        owner        VARCHAR(14)       NOT NULL,
        owner_name   VARCHAR(255)      NOT NULL,
        title        VARCHAR(255)      NOT NULL,
-       accessed     TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
+       accessed     TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       filepath     VARCHAR(255)
+);
+"""
+
+'downloads': """
+-- Like the shards table, this is a working table.
+-- The downloader scans the photos table for photos that are not in this table
+--   then copies the photo_id and original_url into here, proceeding with
+--   similar logic to the shard processing.
+-- It sets the downloaded status to -1 to indicate that work is in progress.
+-- Once the download is complete, the status is set to 0 for OK,
+--   or if there is an error a positive error code is set.
+-- This is a little opaque but saves space and is vaguely Unixy.
+
+CREATE TABLE downloads (
+      photo_id     VARCHAR(12)       NOT NULL PRIMARY KEY,
+      downloader   VARCHAR(20)       NOT NULL,
+      status       TINYINT           NOT NULL DEFAULT -1,
+      started      TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 }

@@ -4,6 +4,11 @@ import mysql.connector
 from mysql.connector import errorcode
 import yaml
 
+# This is the program that fetches data from flickr and saves it to the db.
+# It finds shards that no other instances of this program are downloading
+# then gets the matching results from the flickr api and inserts them.
+# It handles errors a little but do watch the logs.
+
 LOGLEVEL = 25
 
 MAX_TRIES = 10
@@ -21,7 +26,8 @@ RESULTS_PER_PAGE = '500'
 SEARCH_EXTRAS = 'license,url_o,owner_name'
 
 # Ignore so if we're restarting halfway through a page we just skip already
-# inserted images from the previous run.
+# inserted images from the previous run, or for photos returned by multiple
+# searches.
 INSERT_PHOTO = \
 """INSERT IGNORE INTO photos (photo_id, license, original_url, owner,
                               owner_name, title)
