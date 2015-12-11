@@ -1,12 +1,15 @@
 import flickrapi
-import logging
+import logging, time
 import mysql.connector
 from mysql.connector import errorcode
 import yaml
 
-import json
-
 LOGLEVEL = 25
+
+MAX_TRIES = 10
+
+# Time (seconds) to sleep while waiting to retry. Make it relatively large.
+SLEEP_TIME = 60
 
 #NOTE: Pages are index base 1
 #      Page count is inclusive, if there are 100 pages there's a page 100
@@ -117,11 +120,20 @@ class Worker (object):
     def taskInProgress(self):
         return self.page_total == 0 or self.page_current <= self.page_total
 
-    def runTask(self):
+    def runTask(self, tries=0):
         while self.taskInProgress():
-            response = self.fetchPhotosFromFlickr()
-            self.insertPhotos(response)
-            self.updateState()
+            try:
+                response = self.fetchPhotosFromFlickr()
+                self.insertPhotos(response)
+                self.updateState()
+            except Exception, e:
+                # e.g. KeyError: 'url_o'
+                time.sleep(SLEEP_TIME)
+                if tries < MAX_TRIES:
+                    logging.info("Retrying %s - %s", self.shard_id, e)
+                    self.runTask(tries + 1)
+                else:
+                    logging.error("Giving up on %s - %s", self.shard_id, e)
 
     def configureFromTask(self, task):
         (shard_id, licence, characters, worker, page_total, page_current) = task
