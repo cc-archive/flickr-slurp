@@ -2,6 +2,7 @@ Installation
 ============
 
 All Machines
+------------
 
 Install mysql.connector:
 
@@ -26,6 +27,8 @@ Make sure the shards table is populated properly.
 
 Worker Clients
 --------------
+
+Ensure the machine has a unique hostname (at least on the local network)
 
 Configure config.yaml with the connection details for the database.
 

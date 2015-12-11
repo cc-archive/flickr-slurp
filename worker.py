@@ -1,11 +1,7 @@
-from __future__ import print_function
-
 import flickrapi
 import logging
 import mysql.connector
 from mysql.connector import errorcode
-import socket
-import sys
 import yaml
 
 import json
@@ -19,15 +15,15 @@ LOGLEVEL = 25
 #      methods beginning "insert" and "update" access the database
 
 RESULTS_PER_PAGE = '500'
-SEARCH_EXTRAS = 'license,original_format'
+SEARCH_EXTRAS = 'license,url_o,owner_name'
 
 # Ignore so if we're restarting halfway through a page we just skip already
 # inserted images from the previous run.
 INSERT_PHOTO = \
-"""INSERT IGNORE INTO photos (photo_id, license, nsid, farm, server,
-                              originalsecret)
-    VALUES (%(photo_id)s, %(license)s, %(nsid)s, %(farm)s, %(server)s,
-            %(originalsecret)s);"""
+"""INSERT IGNORE INTO photos (photo_id, license, original_url, owner,
+                              owner_name, title)
+    VALUES (%(photo_id)s, %(license)s, %(original_url)s,
+            %(owner)s, %(owner_name)s, %(title)s);"""
 
 UPDATE_PAGE_TOTAL = \
 """UPDATE shards SET page_total=%(page_total)s
@@ -39,22 +35,23 @@ UPDATE_PAGE_CURRENT = \
 
 SELECT_UNFINISHED_TASK = \
 """SELECT * FROM shards
-    WHERE worker = %(my_hostname)s AND page_current < page_total
+    WHERE worker = %(my_identifier)s AND page_current < page_total
     LIMIT 1;"""
 
 # This is actually a canonical use of LAST_INSERT_ID()
 UPDATE_FRESH_TASK = \
-"""UPDATE shards SET worker = %(my_hostname)s,
+"""UPDATE shards SET worker = %(my_identifier)s,
                      shard_id = LAST_INSERT_ID(shard_id)
     WHERE worker IS NULL
     LIMIT 1;"""
+
 SELECT_FRESH_TASK = \
 """SELECT * FROM shards WHERE shard_id = LAST_INSERT_ID();"""
 
 class Worker (object):
 
     def __init__(self, config):
-        self.hostname = socket.gethostname()
+        self.identifier = config['worker']['id']
         self.reset()
         flickrconfig = config['flickr']
         self.flickr = flickrapi.FlickrAPI(flickrconfig['api_key'],
@@ -67,7 +64,7 @@ class Worker (object):
                                                   database=dbconfig['database'],
                                                   autocommit=True)
         self.cursor = self.connection.cursor()
-        
+
     def reset(self):
         self.licence = ''
         self.characters = ''
@@ -81,13 +78,13 @@ class Worker (object):
 
     def insertPhoto(self, response):
         self.cursor.execute(INSERT_PHOTO,
-                            {'photo_id': response['id'],
-                             'license':response['license'],
-                             'nsid':response['owner'],
-                             'farm':response['farm'],
-                             'server':response['server'],
-                             'originalsecret':response['originalsecret']})
-        
+                            {'photo_id':response['id'],
+                             'license':int(response['license']),
+                             'original_url':response['url_o'],
+                             'owner':response['owner'],
+                             'owner_name':response['ownername'],
+                             'title':response['title']})
+
     def insertPhotos(self, response):
         for photo in response['photos']['photo']:
             self.insertPhoto(photo)
@@ -119,7 +116,7 @@ class Worker (object):
 
     def taskInProgress(self):
         return self.page_total == 0 or self.page_current <= self.page_total
-    
+
     def runTask(self):
         while self.taskInProgress():
             response = self.fetchPhotosFromFlickr()
@@ -133,21 +130,21 @@ class Worker (object):
         self.characters = characters
         self.page_total = page_total
         self.page_current = page_current
-            
+
     def selectUnfinishedTask(self):
         got_task = False
         self.cursor.execute(SELECT_UNFINISHED_TASK,
-                            {'my_hostname':self.hostname})
+                            {'my_identifier':self.identifier})
         result = self.cursor.fetchone()
         if result is not None:
             got_task = True
             self.configureFromTask(result)
         return got_task
-            
+
     def updateFreshTask(self):
         got_task = False
         self.cursor.execute(UPDATE_FRESH_TASK,
-                            {'my_hostname':self.hostname})
+                            {'my_identifier':self.identifier})
         self.cursor.execute(SELECT_FRESH_TASK)
         result = self.cursor.fetchone()
         if result is not None:
@@ -158,7 +155,7 @@ class Worker (object):
     def logTask(self):
         logging.log(LOGLEVEL, "SHARD %s - %s%s",
                     self.shard_id, self.characters, self.licence)
-        
+
     def go(self):
         logging.log(LOGLEVEL, 'Starting unfinished tasks.')
         while self.selectUnfinishedTask():

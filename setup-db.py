@@ -24,23 +24,27 @@ CREATE TABLE shards (
 -- https://www.flickr.com/services/api/misc.overview.html
 -- says IDs should be treated as opaque strings.
 -- It does not give the maximum length for these strings.
--- So we're using VARCHAR 255, which is inefficient for search but efficient
--- for storage, which at this scale is an acceptable trade-off and if we hit
--- any nsids longer than 15 chars or any photo IDs of more than 12 digits
--- we're set.
+-- Photo IDs seem to be 11, user ids up to 13. We allow extra in case.
+-- original_url is the o url for the work as provided by flickr.
+-- We can create the photo page url on flickr using
+--    http://flickr.com/photo.gne?id=<photo_id>
+-- or with flickr.com/photos/user_id/photo_id
+-- so we don't need to store any more for that.
 
 CREATE TABLE photos (
        -- Photo IDs are unique across servers, so we use this as our key
-       photo_id     VARCHAR(255)      NOT NULL PRIMARY KEY,
-       license      CHAR(1)           NOT NULL,
-       nsid         VARCHAR(255)      NOT NULL,
-       farm         VARCHAR(5)        NOT NULL,
-       server       VARCHAR(255)      NOT NULL,
-       originalsecret VARCHAR(255)    NOT NULL
+       photo_id     VARCHAR(12)       NOT NULL PRIMARY KEY,
+       license      TINYINT           UNSIGNED NOT NULL,
+       original_url VARCHAR(255)      NOT NULL,
+       owner        VARCHAR(14)       NOT NULL,
+       owner_name   VARCHAR(255)      NOT NULL,
+       title        VARCHAR(255)      NOT NULL,
+       accessed     TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 }
 
+#FIXME: Grab work with titles in other scripts
 # 1..8 inclusive (0 is ARR)
 LICENSES = [str(num) for num in range(1, 9)]
 LETTERS = list('abcdefghijklmnopqrstuvwxyz')

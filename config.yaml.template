@@ -6,3 +6,5 @@ database:
 flickr:
     api_key: KEY
     api_secret: SECRET
+worker:
+    id: UNIQUE MEANINGFUL ID, E.G. IP AND SUBDIRECTORY
