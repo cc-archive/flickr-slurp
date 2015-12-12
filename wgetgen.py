@@ -48,7 +48,7 @@ class WGetGen (object):
         path = self.directoryPath(photo_id)
         filepath = path + '/' + filename
         print 'mkdir -p ' + path
-        print 'wget --debug ' + photo_url + ' -O ' + filepath
+        print 'wget ' + photo_url + ' -O ' + filepath
 
     def go(self):
         self.selectPhotos()
