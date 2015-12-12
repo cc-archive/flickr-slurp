@@ -97,10 +97,8 @@ class Downloader (object):
     def writePhoto(self, data):
         filename = (urlparse.urlparse(self.photo_url).path).split('/')[-1]
         path = self.directoryPath()
-        print path
         self.ensureDirectoryPath(path)
         self.photo_filepath = path + '/' + filename
-        print self.photo_filepath
         try:
             with open(self.photo_filepath, 'w') as outfile:
                 outfile.write(data)
