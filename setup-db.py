@@ -90,10 +90,10 @@ def create_tables (cursor):
             print("OK")
 
 def create_shards (cursor):
-    for lic in LICENSES:
-        print("License: {}".format(lic))
-        for a in LETTERS:
-            for b in LETTERS:
+    for a in LETTERS:
+        for b in LETTERS:
+            print("Letters: {}{}".format(a, b))
+            for lic in LICENSES:
                 cursor.execute(INSERT_SHARD,
                                {'license': lic,
                                 'characters': "{}{}".format(a, b)})
