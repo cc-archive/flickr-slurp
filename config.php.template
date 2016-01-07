@@ -1,0 +1,6 @@
+<?php
+
+$IDS_QUANTITY = 200;
+$DBDSN = 'mysql:host=localhost;dbname=database;';
+$DBUSER = 'user';
+$DBPASSWORD = 'password';
