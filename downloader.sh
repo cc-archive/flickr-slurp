@@ -12,8 +12,8 @@ source "${DIR}/config.sh"
 DOWNLOAD_DIR="${WORK_DIR}/downloads/"
 DIRECTORY_STRUCTURE_ROOT="${WORK_DIR}/flickr"
 REMOTE_DIRECTORY_STRUCTURE_ROOT="${FILE_SERVER_DIR}/flickr/"
-ERROR_LOG="${WORK_DIR}/megaflow-error.log"
-REMOTE_ERROR_LOG="${FILE_SERVER_DIR}/megaflow-error.log"
+ERROR_LOG="${WORK_DIR}/downloader-error.log"
+REMOTE_ERROR_LOG="${FILE_SERVER_DIR}/downloader-error.log"
 # The script to fetch image urls (or the stop command) from
 DATA_SCRIPT="${DATA_SERVER}/more-image-ids.php"
 # The file in which to save each batch of image urls to doanload
@@ -32,7 +32,7 @@ DATA_SERVER_LOG_COMMAND=\
 SCP_ARGS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 SCP="scp $SCP_ARGS -i $FILE_SERVER_SSH_KEY -r ${SSH_OPTS}"
 # The command to wget images efficiently from flickr
-WGET_IMAGES="xargs -n 1 -P 8 wget -q -P \"${DOWNLOAD_DIR}\""
+WGET_IMAGES="xargs -n 1 -P 8 wget -q -P ${DOWNLOAD_DIR}"
 
 #FIXME use ip
 MY_ID=`cat /etc/hostname`
@@ -60,13 +60,13 @@ function check_error {
 # Move all files to a deep directory structure, creating directories as needed
 
 function move_files_to_directories {
-    for f in $DOWNLOAD_DIR/*
+    for f in $(ls "${DOWNLOAD_DIR}" )
     do
         file_num="${f%%_*}"
         p=`printf "%s%s" "${PADDING:${#file_num}}" "${file_num}"`
         dir="${DIRECTORY_STRUCTURE_ROOT}/${p:0:1}/${p:1:1}/${p:2:1}/${p:3:1}/${p:4:1}/${p:5:1}/${p:6:1}/${p:7:1}/${p:8:1}/${p:9:1}/${p:10:1}/"
         mkdir -p "${dir}"
-        mv "${f}" "${dir}"
+        mv "${DOWNLOAD_DIR}/${f}" "${dir}"
     done
 }
 
@@ -77,7 +77,7 @@ function move_files_to_directories {
 while true
 do
     # Fetch the next block of image file urls to fetch
-    echo wget --output-document="$URLS_FILE" "${DATA_SCRIPT}"
+    wget --output-document="$URLS_FILE" "${DATA_SCRIPT}"
     check_error $? "wget urls"
     # Download all the files to our working folder
     cat "${URLS_FILE}" | ${WGET_IMAGES}
