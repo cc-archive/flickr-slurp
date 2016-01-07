@@ -21,16 +21,15 @@ URLS_FILE="$WORK_DIR/file_urls.txt"
 
 PADDING="00000000000"
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+# Note that the -o allows man-in-the-middle attacks, but we need to run this
+# without human intervention.
+# This is also used by scp, so check there before adding/changing things here.
+SSH_OPTS="-i ${FILE_SERVER_SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 DATA_SERVER_LOG_COMMAND=\
 "ssh ${SSH_OPTS} \"${DATA_SERVER}\" 'cat >> ${REMOTE_ERROR_LOG}'"
 # The command to copy images to the file server.
-# Note that the -o allows man-in-the-middle attacks, but we need to run this
-# without human intervention.
-# The alternative would be to .
-SCP_ARGS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-SCP="scp $SCP_ARGS -i $FILE_SERVER_SSH_KEY -r ${SSH_OPTS}"
+SCP="scp  -r ${SSH_OPTS}"
 # The command to wget images efficiently from flickr
 WGET_IMAGES="xargs -n 1 -P 8 wget -q -P ${DOWNLOAD_DIR}"
 
