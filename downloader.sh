@@ -4,16 +4,25 @@
 # fetch them from the image service,
 # and store them on the file server.
 
-# Doesn't work with symlinked scripts
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CONFIG_SERVER_ROOT="http://64.62.236.93"
 
-source "${DIR}/config.sh"
+if [ ! -f ./config.sh ]
+then
+    wget "${CONFIG_SERVER_ROOT}/config.sh"
+fi
+
+source ./config.sh
+
+if [ ! -f "./${FILE_SERVER_SSH_KEY}" ]
+then
+    wget "${CONFIG_SERVER_ROOT}/${FILE_SERVER_SSH_KEY}"
+fi
 
 DOWNLOAD_DIR="${WORK_DIR}/downloads/"
-DIRECTORY_STRUCTURE_ROOT="${WORK_DIR}/flickr"
-REMOTE_DIRECTORY_STRUCTURE_ROOT="${FILE_SERVER_DIR}/flickr/"
+LOCAL_DOWNLOAD_DIRECTORY_ROOT="${WORK_DIR}/flickr"
+REMOTE_UPLOAD_DIRECTORY_ROOT="${FILE_SERVER}:${FILE_SERVER_DIR}/"
 ERROR_LOG="${WORK_DIR}/downloader-error.log"
-REMOTE_ERROR_LOG="${FILE_SERVER_DIR}/downloader-error.log"
+REMOTE_ERROR_LOG="${FILE_SERVER}:${FILE_SERVER_DIR}/downloader-error.log"
 # The script to fetch image urls (or the stop command) from
 DATA_SCRIPT="${DATA_SERVER}/more-image-ids.php"
 # The file in which to save each batch of image urls to doanload
@@ -63,7 +72,7 @@ function move_files_to_directories {
     do
         file_num="${f%%_*}"
         p=`printf "%s%s" "${PADDING:${#file_num}}" "${file_num}"`
-        dir="${DIRECTORY_STRUCTURE_ROOT}/${p:0:1}/${p:1:1}/${p:2:1}/${p:3:1}/${p:4:1}/${p:5:1}/${p:6:1}/${p:7:1}/${p:8:1}/${p:9:1}/${p:10:1}/"
+        dir="${LOCAL_DOWNLOAD_DIRECTORY_ROOT}/${p:0:1}/${p:1:1}/${p:2:1}/${p:3:1}/${p:4:1}/${p:5:1}/${p:6:1}/${p:7:1}/${p:8:1}/${p:9:1}/${p:10:1}/"
         mkdir -p "${dir}"
         mv "${DOWNLOAD_DIR}/${f}" "${dir}"
     done
@@ -84,8 +93,8 @@ do
     # Make a nice filesystem friendly directory structure for the files
     move_files_to_directories
     # Copy the files to the file server, deleting as we go
-    $SCP "${LOCAL_FILE_ROOT}" \
-         "${FILE_SERVER}:${REMOTE_DIRECTORY_STRUCTURE_ROOT}"
+    $SCP "${LOCAL_DOWNLOAD_DIRECTORY_ROOT}" \
+         "${REMOTE_UPLOAD_DIRECTORY_ROOT}"
     check_error $? "scp images"
     # Clean up ready for next time
     rm -f "${URLS_FILE}"

@@ -1,5 +1,5 @@
 DATA_SERVER=localhost
 FILE_SERVER=localhost
-WORK_DIR=/home/worker/workdir
 FILE_SERVER_DIR=/home/worker/workdir
-FILE_SERVER_SSH_KEY=/tmp/key.pem
+WORK_DIR=.
+FILE_SERVER_SSH_KEY=key.pem
