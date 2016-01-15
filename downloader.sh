@@ -38,7 +38,7 @@ SSH_OPTS="-i ${FILE_SERVER_SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHost
 DATA_SERVER_LOG_COMMAND=\
 "ssh ${SSH_OPTS} \"${DATA_SERVER}\" 'cat >> ${REMOTE_ERROR_LOG}'"
 # The command to copy images to the file server.
-SCP="scp  -r ${SSH_OPTS}"
+RSYNC="rsync -e '${SSH_OPTS}' -r "
 # The command to wget images efficiently from flickr
 WGET_IMAGES="xargs -n 1 -P 8 wget -q -P ${DOWNLOAD_DIR}"
 
@@ -93,8 +93,8 @@ do
     # Make a nice filesystem friendly directory structure for the files
     move_files_to_directories
     # Copy the files to the file server, deleting as we go
-    $SCP "${LOCAL_DOWNLOAD_DIRECTORY_ROOT}" \
-         "${REMOTE_UPLOAD_DIRECTORY_ROOT}"
+    $RSYNC "${LOCAL_DOWNLOAD_DIRECTORY_ROOT}" \
+           "${REMOTE_UPLOAD_DIRECTORY_ROOT}"
     check_error $? "scp images"
     # Clean up ready for next time
     rm -f "${URLS_FILE}"
