@@ -4,7 +4,7 @@
 # fetch them from the image service,
 # and store them on the file server.
 
-CONFIG_SERVER_ROOT="http://64.62.236.93"
+CONFIG_SERVER_ROOT="http://107.170.230.223"
 
 if [ ! -f ./config.sh ]
 then
