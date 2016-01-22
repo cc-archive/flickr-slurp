@@ -1,5 +1,7 @@
 #/bin/bash
 
+set -x
+
 # Script to loop fetching image IDs from the databse server,
 # fetch them from the image service,
 # and store them on the file server.
@@ -16,6 +18,7 @@ source ./config.sh
 if [ ! -f "./${FILE_SERVER_SSH_KEY}" ]
 then
     wget "${CONFIG_SERVER_ROOT}/${FILE_SERVER_SSH_KEY}"
+    chmod 400 "${FILE_SERVER_SSH_KEY}"
 fi
 
 DOWNLOAD_DIR="${WORK_DIR}/downloads/"
@@ -32,13 +35,9 @@ PADDING="00000000000"
 
 # Note that the -o allows man-in-the-middle attacks, but we need to run this
 # without human intervention.
-# This is also used by scp, so check there before adding/changing things here.
-SSH_OPTS="-i ${FILE_SERVER_SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-
-DATA_SERVER_LOG_COMMAND=\
-"ssh ${SSH_OPTS} \"${DATA_SERVER}\" 'cat >> ${REMOTE_ERROR_LOG}'"
-# The command to copy images to the file server.
-RSYNC="rsync -e '${SSH_OPTS}' -r "
+#FILE_SERVER_LOG_COMMAND=\
+#"${SSH} \"${FILE_SERVER}\" 'cat >> ${REMOTE_ERROR_LOG}'"
+SSH="ssh -i ${FILE_SERVER_SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 # The command to wget images efficiently from flickr
 WGET_IMAGES="xargs -n 1 -P 8 wget -q -P ${DOWNLOAD_DIR}"
 
@@ -51,7 +50,7 @@ function log {
     msg="$(date) - ${MY_ID}: ${1}"
     echo "$msg"
     echo "$msg" >> "${ERROR_LOG}"
-    echo "$msg" | ${DATA_SERVER_LOG_COMMAND}
+#    echo "$msg" | ${FILE_SERVER_LOG_COMMAND}
 }
 
 # Check for errors, log and exit if found
@@ -101,9 +100,12 @@ do
     # Make a nice filesystem friendly directory structure for the files
     move_files_to_directories
     # Copy the files to the file server, deleting as we go
-    $RSYNC "${LOCAL_DOWNLOAD_DIRECTORY_ROOT}" \
-           "${REMOTE_UPLOAD_DIRECTORY_ROOT}"
-    check_error $? "scp images"
+    # This is inline because Bash hates quotes in variables
+    # Note that the -o allows man-in-the-middle attacks, but we need to run this
+    # without human intervention.
+    rsync -e "${SSH}" -r \
+          "${LOCAL_DOWNLOAD_DIRECTORY_ROOT}" "${REMOTE_UPLOAD_DIRECTORY_ROOT}"
+    check_error $? "rsync images"
     # Clean up ready for next time
     rm -f "${URLS_FILE}"
 done
