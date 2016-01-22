@@ -78,15 +78,23 @@ function move_files_to_directories {
     done
 }
 
-# Loop forever until we get an error.
+# Loop forever until we get an error or signal
 # We will get a 404 when there are no more image ids so this will exit,
 # although we don't check for 404s explicitly.
 
+# Note the checking to see if we are continuing after being interrupted
+
 while true
 do
-    # Fetch the next block of image file urls to fetch
-    wget --output-document="$URLS_FILE" "${DATA_SCRIPT}"
-    check_error $? "wget urls"
+    # Clean up ready to start
+    rm -rf "${DOWNLOAD_DIR}/*"
+    # If we weren't interrupted before we finished, get new file list
+    if [ ! -f "${URLS_FILE}" ]
+    then
+       # Fetch the next block of image file urls to fetch
+       wget --output-document="$URLS_FILE" "${DATA_SCRIPT}"
+       check_error $? "wget urls"
+    fi
     # Download all the files to our working folder
     cat "${URLS_FILE}" | ${WGET_IMAGES}
     check_error $? "wget images"
@@ -98,5 +106,4 @@ do
     check_error $? "scp images"
     # Clean up ready for next time
     rm -f "${URLS_FILE}"
-    rm -rf "${DOWNLOAD_DIR}/*"
 done
