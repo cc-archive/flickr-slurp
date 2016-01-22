@@ -1,6 +1,6 @@
 #/bin/bash
 
-set -x
+#set -x
 
 # Script to loop fetching image IDs from the databse server,
 # fetch them from the image service,
