@@ -1,6 +1,4 @@
-#/bin/bash
-
-#set -x
+#!/bin/bash
 
 # Script to loop fetching image IDs from the databse server,
 # fetch them from the image service,
@@ -87,6 +85,11 @@ while true
 do
     # Clean up ready to start
     rm -rf "${DOWNLOAD_DIR}/*"
+    # If we crashed with a zero-length urls file, remove it
+    if [ ! -s "${URLS_FILE}" ]
+    then
+        rm -f "${URLS_FILE}"
+    fi
     # If we weren't interrupted before we finished, get new file list
     if [ ! -f "${URLS_FILE}" ]
     then
