@@ -92,8 +92,8 @@ function swizzle_urls {
 while true
 do
     # Clean up ready to start
-    rm -rf "${DOWNLOAD_DIR}/*"
-    rm -rf "${LOCAL_DOWNLOAD_DIRECTORY_ROOT}/*"
+    rm -rf "${DOWNLOAD_DIR}"/*
+    rm -rf "${LOCAL_DOWNLOAD_DIRECTORY_ROOT}"/*
     # If we crashed with a zero-length urls file, remove it
     if [ ! -s "${URLS_FILE}" ]
     then
