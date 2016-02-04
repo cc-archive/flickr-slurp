@@ -75,6 +75,14 @@ function move_files_to_directories {
     done
 }
 
+# A large number of files were inserted in the DB in the wrong format.
+# As it will take a couple of days to fix in the db, fix it here instead.
+# If the url is correct/has already been fixed this is non-destructive.
+
+function swizzle_urls {
+    perl -i -p -e 's/(?<!_o).jpg$/_o.jpg/' "${URLS_FILE}"
+}
+
 # Loop forever until we get an error or signal
 # We will get a 404 when there are no more image ids so this will exit,
 # although we don't check for 404s explicitly.
@@ -97,6 +105,9 @@ do
        wget --output-document="$URLS_FILE" "${DATA_SCRIPT}"
        check_error $? "wget urls"
     fi
+    # If the url inserted in the db isn't the _o version, fix that
+    # Do it here just in case we are restarting with an unfixed version
+    swizzle_urls
     # Download all the files to our working folder
     cat "${URLS_FILE}" | ${WGET_IMAGES}
     check_error $? "wget images"
