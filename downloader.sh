@@ -37,7 +37,7 @@ PADDING="00000000000"
 #"${SSH} \"${FILE_SERVER}\" 'cat >> ${REMOTE_ERROR_LOG}'"
 SSH="ssh -i ${FILE_SERVER_SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 # The command to wget images efficiently from flickr
-WGET_IMAGES="xargs -n 1 -P 8 wget -q -P ${DOWNLOAD_DIR}"
+WGET_IMAGES="xargs -n 1 -P 12 wget -q -P ${DOWNLOAD_DIR}"
 
 #FIXME use ip
 MY_ID=`cat /etc/hostname`
