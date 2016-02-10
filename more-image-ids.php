@@ -5,7 +5,8 @@
 Make sure you:
 
    CREATE TABLE download_ids_offsets (
-       ids_offset     BIGINT         UNSIGNED NOT NULL PRIMARY KEY
+       id             INT        UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+       ids_offset     BIGINT     UNSIGNED NOT NULL
    );
    INSERT INTO download_ids_offsets (ids_offset) VALUES (1);
 
@@ -37,7 +38,7 @@ $dbh = new PDO($DBDSN, $DBUSER, $DBPASSWORD);
 // Where did the last downloader finish?
 
 $offset_statement = $dbh->prepare("SELECT ids_offset FROM download_ids_offsets
-                                   ORDER BY ids_offset DESC
+                                   ORDER BY id DESC
                                    LIMIT 1");
 $ok = $offset_statement->execute();
 if ($ok === false) {
@@ -52,13 +53,16 @@ if ($start_offset === false) {
     exit;
 }
 
+// exclusive
+$end_offset = $start_offset + $IDS_QUANTITY;
+
 // Get a block of photo urls to download
 
 $photo_urls = false;
 $select_urls_statement = $dbh->prepare("SELECT original_url
                                        FROM numeric_id_photos
-                                       LIMIT " . $IDS_QUANTITY
-                                    . " OFFSET " . $start_offset);
+                                       WHERE id >= " . $start_offset
+                                    . " AND id  < " . $end_offset);
 $ok = $select_urls_statement->execute();
 if ($ok === false) {
     error_log("Couldn't select photos for " . $requestor);
@@ -80,19 +84,16 @@ if (count($photo_urls) == 0) {
     exit;
 }
 
-
 array_walk($photo_urls,
            function ($row) { echo $row['original_url'] . "\n"; });
-
-$next_offset = $start_offset + $IDS_QUANTITY;
 
 // Store the offset that the next task should start from
 $store_offset_statement = $dbh->prepare("INSERT INTO download_ids_offsets
                                              (ids_offset)
                                              VALUES (:offset)");
-$ok = $store_offset_statement->execute([':offset' => $next_offset]);
+$ok = $store_offset_statement->execute([':offset' => $end_offset]);
 if ($ok === false) {
-    error_log("Couldn't save next offset (" . $next_offset . ") for "
+    error_log("Couldn't save next offset (" . $end_offset . ") for "
             . $requestor);
     http_response_code(500);
     exit;

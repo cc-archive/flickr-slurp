@@ -17,6 +17,11 @@ LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-9.tsv' INTO TABLE i
 
 Same as import_photos, but with integer photo_id
 
+We also need an integer id pk so we can query ranges efficiently.
+
+ALTER TABLE numeric_id_photos DROP PRIMARY KEY;
+ALTER TABLE numeric_id_photos ADD id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY;
+
 Flickr ids won't fit in max mysql unsigned int,
 Unsigned int max: 4294967295
 Flickr id:        23738440462
@@ -133,3 +138,8 @@ This gives (with SHOW WARNINGS):
 +---------+------+-------------------------------------------------+
 
 Which for half a million entries vs. 100 million isn't bad.
+
+
+apt-get install rsync
+
+*/5 * * * * pgrep downloader.sh > /dev/null || (cd /root/ && wget http://107.170.230.223/downloader.sh http://107.170.230.223/config.sh && ./downloader.sh) >> /root/downloader-cron.log 2>&1 &
