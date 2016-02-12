@@ -142,4 +142,15 @@ Which for half a million entries vs. 100 million isn't bad.
 
 apt-get install rsync
 
-*/5 * * * * pgrep downloader.sh > /dev/null || (cd /root/ && wget http://107.170.230.223/downloader.sh http://107.170.230.223/config.sh && ./downloader.sh) >> /root/downloader-cron.log 2>&1 &
+# pgrep returns 0 for success, > 0 for failure, so we use logical and here:
+# && doesn't work for some reason, use [ $? ... ] instead.
+
+*/5 * * * * /bin/bash /root/tickler.sh
+
+pgrep -f downloader.sh > /dev/null;
+if [ $? -eq 1 ]
+then
+   wget -N -O /root/downloader.sh http://107.170.230.223/downloader.sh
+   wget -N -O /root/config.sh http://107.170.230.223/config.sh
+   (/root/downloader.sh >> /root/downloader-cron.log 2>&1) &
+fi
