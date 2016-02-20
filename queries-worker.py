@@ -34,33 +34,38 @@ SEARCH_EXTRAS = 'license,url_o,owner_name'
 # inserted images from the previous run, or for photos returned by multiple
 # searches.
 INSERT_PHOTO = \
-"""INSERT IGNORE INTO flickr_photos_by_date (photo_id, license, original_url,
-                                             owner, owner_name, title)
+"""INSERT IGNORE INTO flickr_photos_from_queries (photo_id, license,
+                                                  original_url, owner,
+                                                  owner_name, title)
     VALUES (%(photo_id)s, %(license)s, %(original_url)s,
             %(owner)s, %(owner_name)s, %(title)s);"""
 
+INSERT_PHOTO_TASK = \
+"""INSERT IGNORE INTO numeric_id_photos (photo_id, original_url)
+    VALUES (%(photo_id)s, %(original_url)s)"""
+
 UPDATE_PAGE_TOTAL = \
-"""UPDATE time_slices SET page_total=%(page_total)s
-    WHERE time_slice_id=%(time_slice_id)s;"""
+"""UPDATE query_shards SET page_total=%(page_total)s
+    WHERE query_id=%(query_id)s;"""
 
 UPDATE_PAGE_CURRENT = \
-"""UPDATE time_slices SET page_current=%(page_current)s
-    WHERE time_slice_id=%(time_slice_id)s;"""
+"""UPDATE query_shards SET page_current=%(page_current)s
+    WHERE query_id=%(query_id)s;"""
 
 SELECT_UNFINISHED_TASK = \
-"""SELECT * FROM time_slices
+"""SELECT * FROM query_shards
     WHERE worker = %(my_identifier)s AND page_current < page_total
     LIMIT 1;"""
 
 # This is actually a canonical use of LAST_INSERT_ID()
 UPDATE_FRESH_TASK = \
-"""UPDATE time_slices SET worker = %(my_identifier)s,
-                     time_slice_id = LAST_INSERT_ID(time_slice_id)
+"""UPDATE query_shards SET worker = %(my_identifier)s,
+          query_id = LAST_INSERT_ID(query_id)
     WHERE worker IS NULL
     LIMIT 1;"""
 
 SELECT_FRESH_TASK = \
-"""SELECT * FROM time_slices WHERE time_slice_id = LAST_INSERT_ID();"""
+"""SELECT * FROM query_shards WHERE query_id = LAST_INSERT_ID();"""
 
 class Worker (object):
 
@@ -81,11 +86,10 @@ class Worker (object):
 
     def reset(self):
         self.licence = ''
-        self.start_date = 0
-        self.end_date = 0
+        self.query = ''
         self.page_current = 1
         self.page_total = 0
-        self.time_slice_id = -1
+        self.query_id = -1
 
     def shutdown(self):
         self.cursor.close()
@@ -103,6 +107,9 @@ class Worker (object):
                                  'owner':response['owner'],
                                  'owner_name':response['ownername'],
                                  'title':response['title']})
+            self.cursor.execute(INSERT_PHOTO_TASK,
+                                {'photo_id':response['id'],
+                                 'original_url':response['url_o']})
         #else:
         #    logging.error("No url_o in %s, not inserting." % response['id'])
 
@@ -113,15 +120,14 @@ class Worker (object):
     def updateState(self):
         self.page_current += 1
         self.cursor.execute(UPDATE_PAGE_TOTAL,
-                            {'time_slice_id':self.time_slice_id,
+                            {'query_id':self.query_id,
                              'page_total':self.page_total})
         self.cursor.execute(UPDATE_PAGE_CURRENT,
-                            {'time_slice_id':self.time_slice_id,
+                            {'query_id':self.query_id,
                              'page_current':self.page_current})
 
     def fetchPhotosFromFlickr(self):
-        response = self.flickr.photos.search(min_upload_date=self.start_date,
-                                             max_upload_date=self.end_date,
+        response = self.flickr.photos.search(text=self.query,
                                              license=LICENSES,
                                              page=self.page_current,
                                              per_page=RESULTS_PER_PAGE,
@@ -131,12 +137,12 @@ class Worker (object):
         self.page_total = response['photos']['pages']
         self.page_current = response['photos']['page']
         logging.log(LOGLEVEL,
-                    "TIME_SLICE {} - Page {}/{}".format(self.time_slice_id,
-                                                        self.page_current,
-                                                        self.page_total)),
+                    "QUERY_SHARD {} - Page {}/{}".format(self.query_id,
+                                                   self.page_current,
+                                                   self.page_total)),
         return response
 
-     def taskFinished(self):
+    def taskFinished(self):
         return (self.page_current >= self.page_total)
 
     def runTask(self, tries=0):
@@ -157,20 +163,18 @@ class Worker (object):
                 logging.error(e)
                 time.sleep(SLEEP_TIME)
                 if tries < MAX_TRIES:
-                    logging.info("Retrying %s - %s", self.time_slice_id, e)
+                    logging.info("Retrying %s - %s", self.query_id, e)
                     self.runTask(tries + 1)
                 else:
-                    self.page_current = self.page_total + 1
+                    self.page_current = self.page_total + 100
                     self.updateState()
-                    logging.error("Giving up on %s - %s", self.time_slice_id, e)
+                    logging.error("Giving up on %s - %s", self.query_id, e)
                     break
 
     def configureFromTask(self, task):
-        (time_slice_id, start_date, end_date, worker, page_total,
-         page_current) = task
-        self.time_slice_id = time_slice_id
-        self.start_date = start_date
-        self.end_date = end_date
+        (query_id, query, worker, page_total, page_current) = task
+        self.query_id = query_id
+        self.query = query
         self.page_total = page_total
         self.page_current = page_current
 
@@ -196,8 +200,8 @@ class Worker (object):
         return got_task
 
     def logTask(self):
-        logging.log(LOGLEVEL, "TIME_SLICE %s - %s -- %s",
-                    self.time_slice_id, self.start_date, self.end_date)
+        logging.log(LOGLEVEL, "QUERY_SHARD %s: %s",
+                    self.query_id, self.query)
 
     def go(self):
         logging.log(LOGLEVEL, 'Starting unfinished tasks.')

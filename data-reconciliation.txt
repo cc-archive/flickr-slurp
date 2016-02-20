@@ -19,20 +19,21 @@ Same as import_photos, but with integer photo_id
 
 We also need an integer id pk so we can query ranges efficiently.
 
-ALTER TABLE numeric_id_photos DROP PRIMARY KEY;
-ALTER TABLE numeric_id_photos ADD id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY;
-
 Flickr ids won't fit in max mysql unsigned int,
 Unsigned int max: 4294967295
 Flickr id:        23738440462
 So use unsigned bigint
 
+Definition of table over time:
+
 CREATE TABLE numeric_id_photos (
     photo_id     BIGINT        UNSIGNED NOT NULL PRIMARY KEY,
     original_url CHAR(255)     NOT NULL
 );
-
-
+ALTER TABLE numeric_id_photos DROP PRIMARY KEY;
+ALTER TABLE numeric_id_photos ADD id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY;
+CREATE INDEX numeric_id_photos_photo_ids on numeric_id_photos (photo_id);
+ALTER TABLE numeric_id_photos ADD UNIQUE(photo_id);
 
 LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-0.tsv' INTO TABLE numeric_id_photos FIELDS TERMINATED BY '\t' LINES TERMINATED BY '\n';
 LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-1.tsv' INTO TABLE numeric_id_photos FIELDS TERMINATED BY '\t' LINES TERMINATED BY '\n';
@@ -146,11 +147,3 @@ apt-get install rsync
 # && doesn't work for some reason, use [ $? ... ] instead.
 
 */5 * * * * /bin/bash /root/tickler.sh
-
-pgrep -f downloader.sh > /dev/null;
-if [ $? -eq 1 ]
-then
-   wget -N -O /root/downloader.sh http://107.170.230.223/downloader.sh
-   wget -N -O /root/config.sh http://107.170.230.223/config.sh
-   (/root/downloader.sh >> /root/downloader-cron.log 2>&1) &
-fi
