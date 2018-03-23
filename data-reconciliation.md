@@ -13,6 +13,14 @@ LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-7.tsv' INTO TABLE i
 LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-8.tsv' INTO TABLE import_photos FIELDS TERMINATED BY '\t' LINES TERMINATED BY '\n';
 LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-9.tsv' INTO TABLE import_photos FIELDS TERMINATED BY '\t' LINES TERMINATED BY '\n';
 
+
+# Add an index to PHOTOS (after "eek" below)
+
+ALTER TABLE photos DROP PRIMARY KEY;
+ALTER TABLE photos ADD id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY;
+CREATE INDEX photos_photo_ids on photos (photo_id);
+
+
 # numeric_id_photos
 
 Same as import_photos, but with integer photo_id
@@ -47,9 +55,6 @@ LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-8.tsv' INTO TABLE n
 LOAD DATA INFILE '/root/yfcc100m-for-import/yfcc100m_dataset-9.tsv' INTO TABLE numeric_id_photos FIELDS TERMINATED BY '\t' LINES TERMINATED BY '\n';
 
 
-
-
-
 # yfcc100m
 
 Example row:
@@ -73,8 +78,6 @@ sed 's/ \{2,\}/\t/g' .presents/yfcc100m_dataset-6 | cut -f1,15 > yfcc100m-for-im
 sed 's/ \{2,\}/\t/g' .presents/yfcc100m_dataset-7 | cut -f1,15 > yfcc100m-for-import/yfcc100m_dataset-7.tsv
 sed 's/ \{2,\}/\t/g' .presents/yfcc100m_dataset-8 | cut -f1,15 > yfcc100m-for-import/yfcc100m_dataset-8.tsv
 sed 's/ \{2,\}/\t/g' .presents/yfcc100m_dataset-9 | cut -f1,15 > yfcc100m-for-import/yfcc100m_dataset-9.tsv
-
-
 
 
 # Add photo data
@@ -141,9 +144,62 @@ This gives (with SHOW WARNINGS):
 Which for half a million entries vs. 100 million isn't bad.
 
 
+
+
+
+
+
 apt-get install rsync
 
 # pgrep returns 0 for success, > 0 for failure, so we use logical and here:
 # && doesn't work for some reason, use [ $? ... ] instead.
 
 */5 * * * * /bin/bash /root/tickler.sh
+
+
+# Switch to a.o upload at:
+
+here ->  95543501 | 48185 |
+
+
+
+
+iaskeys:
+export IAS3KEYS=XShiXQDWiHu2GcIB:pIdYikabnHybiGyW
+
+Collection:
+flickr-0cfdd119-0b17-4fbe-87cb-d3771617087f
+
+
+Internet Archive...
+login: ml@creativecommons.org
+password: dec16
+
+Upload README with contact information w/personal contact info:
+
+Hello!
+This is a backup of CC licensed images from flickr.
+For more information, contact-
+mattl@cc
+rob@cc
+
+
+# Date slice import
+
+CREATE TABLE date_slice_photos (
+       -- Photo IDs are unique across servers, so we use this as our key
+       photo_id     VARCHAR(12)       NOT NULL PRIMARY KEY,
+       license      TINYINT           UNSIGNED NOT NULL,
+       original_url VARCHAR(255)      NOT NULL,
+       owner        VARCHAR(14)       NOT NULL,
+       owner_name   VARCHAR(255)      NOT NULL,
+       title        VARCHAR(255)      NOT NULL,
+       accessed     TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       filepath     VARCHAR(255)
+       );
+
+ALTER TABLE date_slice_photos DROP PRIMARY KEY;
+ALTER TABLE date_slice_photos ADD id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY;
+CREATE INDEX date_slice_photos_photo_ids on date_slice_photos (photo_id);
+
+load data infile '/tmp/flickr_photos_by_date_1.txt' into table date_slice_photos (photo_id, license, original_url, owner, owner_name, title);
